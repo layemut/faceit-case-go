@@ -44,17 +44,3 @@ func (ps *Pubsub) Publish(topic string, msg UserEvent) {
 		ch <- msg
 	}
 }
-
-func (ps *Pubsub) Close() {
-	ps.mu.Lock()
-	defer ps.mu.Unlock()
-
-	if !ps.closed {
-		ps.closed = true
-		for _, subs := range ps.subs {
-			for _, ch := range subs {
-				close(ch)
-			}
-		}
-	}
-}
