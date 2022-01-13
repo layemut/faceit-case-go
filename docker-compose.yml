@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  app:
+    container_name: faceit-users-api
+    build: .
+    ports:
+      - 9029:9029
+      - 8029:8029
+    restart: on-failure
+    environment:
+      MONGO_DB_NAME: "faceit"
+      MONGO_URI: "mongodb://mongo:27017/faceit"
+      SERVER_PORT: ":9029"
+      MANAGEMENT_PORT: ":8029"
+    volumes:
+      - .:/app
+    depends_on:
+      - mongo
+    links:
+      - mongo
+  mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_DATABASE: faceit
