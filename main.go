@@ -7,5 +7,6 @@ import (
 func main() {
 	application := &app.App{}
 	application.Initialize()
+	application.StartNotificationService()
 	application.Run()
 }

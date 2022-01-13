@@ -43,6 +43,8 @@ type PageRequest struct {
 // It will hash the password before save
 func SaveUser(collection ICollection, user *User) error {
 	user.ID = uuid.New().String()
+	user.CreateAt = time.Now()
+	user.UpdateAt = time.Now()
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -61,6 +63,7 @@ func UpdateUser(collection ICollection, user *User) error {
 		return err
 	}
 	user.Password = string(hashedPassword)
+	user.UpdateAt = time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_, err = collection.UpdateOne(ctx, bson.M{"_id": user.ID}, bson.M{"$set": user})

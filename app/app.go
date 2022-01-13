@@ -6,6 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/layemut/faceit-case-go/handlers"
+	"github.com/layemut/faceit-case-go/notify"
+	"github.com/layemut/faceit-case-go/service"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -17,6 +19,7 @@ type App struct {
 	MRouter     *gin.Engine
 	MongoClient *mongo.Client
 	Config      *appConfig
+	PubSub      *notify.Pubsub
 }
 
 // appConfig is the configuration for the application
@@ -30,6 +33,7 @@ type appConfig struct {
 // Initialize is the function to initialize the application, loads config connects to database etc.
 func (a *App) Initialize() {
 	a.Config = loadConfig()
+	a.PubSub = notify.New()
 
 	a.Router = gin.Default()
 	a.MongoClient = connectToMongo(a.Config.MongoURI)
@@ -40,6 +44,16 @@ func (a *App) Initialize() {
 func (a *App) Run() {
 	go a.MRouter.Run(a.Config.MPort)
 	_ = a.Router.Run(a.Config.ServerPort)
+}
+
+// StartNotificationService starts notification service to recieve user events and send notification
+func (a *App) StartNotificationService() {
+	notificationService := &service.NotificationService{
+		PubSub: a.PubSub,
+	}
+
+	notificationService.SubscribeUserCreateEvent()
+	notificationService.SubscribeUserUpdateEvent()
 }
 
 // loadConfig is a function to load configuration from config file app.env
@@ -86,8 +100,8 @@ func (a *App) setRouters() {
 	userCollection := database.Collection("users")
 
 	a.Router = gin.Default()
-	a.Router.POST("/user", handlers.SaveUser(userCollection))
-	a.Router.PUT("/user", handlers.UpdateUser(userCollection))
+	a.Router.POST("/user", handlers.SaveUser(userCollection, a.PubSub))
+	a.Router.PUT("/user", handlers.UpdateUser(userCollection, a.PubSub))
 	a.Router.GET("/user", handlers.ListUsers(userCollection))
 	a.Router.DELETE("/user/:id", handlers.RemoveUser(userCollection))
 

@@ -5,11 +5,12 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/layemut/faceit-case-go/notify"
 	"github.com/layemut/faceit-case-go/service"
 )
 
 // SaveUser saves a user by request
-func SaveUser(collection service.ICollection) func(c *gin.Context) {
+func SaveUser(collection service.ICollection, pubSub *notify.Pubsub) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var user service.User
 		if err := c.BindJSON(&user); err != nil {
@@ -25,16 +26,17 @@ func SaveUser(collection service.ICollection) func(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		pubSub.Publish("create", notify.UserEvent{ID: user.ID, FirstName: user.FirstName, LastName: user.LastName, Email: user.Email})
 		c.IndentedJSON(http.StatusCreated, &user)
 	}
 }
 
 // UpdateUser updates a user by request
-func UpdateUser(collection service.ICollection) func(c *gin.Context) {
+func UpdateUser(collection service.ICollection, pubSub *notify.Pubsub) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var user service.User
 		if err := c.BindJSON(&user); err != nil {
-			c.AbortWithError(http.StatusBadRequest, err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		if len(user.ID) == 0 {
@@ -45,6 +47,7 @@ func UpdateUser(collection service.ICollection) func(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		pubSub.Publish("update", notify.UserEvent{ID: user.ID, FirstName: user.FirstName, LastName: user.LastName, Email: user.Email})
 		c.IndentedJSON(http.StatusOK, &user)
 	}
 }
@@ -63,7 +66,6 @@ func RemoveUser(collection service.ICollection) func(c *gin.Context) {
 		}
 		c.IndentedJSON(http.StatusOK, gin.H{"message": "User removed"})
 	}
-
 }
 
 // ListUsers returns a list of users based on the page request
